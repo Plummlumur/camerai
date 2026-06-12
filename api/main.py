@@ -41,7 +41,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         loop = asyncio.get_running_loop()
 
         def on_event(payload: dict) -> None:
-            loop.call_soon_threadsafe(event_queue.put_nowait, payload)
+            try:
+                loop.call_soon_threadsafe(event_queue.put_nowait, payload)
+            except RuntimeError:
+                pass  # loop already closed during shutdown
 
         service = CounterService(
             source=build_source(app_settings),
@@ -83,6 +86,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         service.stop()
         for task in background_tasks:
             task.cancel()
+        await asyncio.gather(*background_tasks, return_exceptions=True)
         counter_thread.join(timeout=2)
         store.close()
 
