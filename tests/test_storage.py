@@ -4,6 +4,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from storage.events import EventStore
+from timeutils import local_day_bounds_utc
 
 VIENNA = ZoneInfo("Europe/Vienna")
 T = "2026-06-12T{:02d}:{:02d}:00+00:00"
@@ -73,3 +74,20 @@ def test_daily_totals(store):
         {"date": "2026-06-11", "in": 1, "out": 0},
         {"date": "2026-06-12", "in": 1, "out": 1},
     ]
+
+
+def test_replay_occupancy_on_empty_store(store):
+    assert store.replay_occupancy(T.format(0, 0)) == 0
+
+
+def test_correction_without_value_resets_to_zero(store):
+    store.add_event(T.format(8, 0), "in", "raum-1")
+    store.add_event(T.format(9, 0), "correction", "raum-1")
+    assert store.replay_occupancy(T.format(0, 0)) == 0
+
+
+def test_counts_between_includes_last_minute_with_day_bounds(store):
+    start, end = local_day_bounds_utc(date(2026, 6, 12), VIENNA)
+    # 21:59:59 UTC = 23:59:59 Vienna (CEST), still inside the local day
+    store.add_event("2026-06-12T21:59:59+00:00", "in", "raum-1")
+    assert store.counts_between(start, end) == {"in": 1, "out": 0}

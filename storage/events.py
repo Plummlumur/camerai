@@ -24,6 +24,7 @@ class EventStore:
         path.parent.mkdir(parents=True, exist_ok=True)
         self._conn = sqlite3.connect(str(path), check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.commit()
         self._conn.executescript(_SCHEMA)
         self._lock = threading.Lock()
 
@@ -62,7 +63,7 @@ class EventStore:
             elif direction == "out":
                 count = max(0, count - 1)
             else:
-                count = max(0, value or 0)
+                count = max(0, value if value is not None else 0)
         return count
 
     def hourly_counts(self, start_utc: str, end_utc: str, tz: ZoneInfo) -> list[dict]:
