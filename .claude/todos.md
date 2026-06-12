@@ -4,19 +4,36 @@ Plan: `docs/superpowers/plans/2026-06-12-raumzaehler-v1.md`
 
 ## Version 1 — Einzelgeraet (Zaehlfunktion + lokales Dashboard)
 
-- [ ] Task 1: Project scaffolding (deps, tool config, packages)
-- [ ] Task 2: Configuration (`config.py`)
-- [ ] Task 3: Time helpers (`timeutils.py`)
-- [ ] Task 4: Event store (SQLite, WAL, aggregates)
-- [ ] Task 5: Centroid tracker
-- [ ] Task 6: Line crossing + occupancy state
-- [ ] Task 7: Detection sources (interface, simulator, factory)
-- [ ] Task 8: Counting service
-- [ ] Task 9: FastAPI app (lifespan, status, static, websocket hub)
-- [ ] Task 10: Stats endpoints, correction, WS broadcast
-- [ ] Task 11: Dashboard frontend (dark, live, chart)
-- [ ] Task 12: IMX500 camera source (Pi only)
-- [ ] Task 13: Deployment (systemd, deploy.sh, README) + Pi verification
+Implementiert auf Branch `feature/v1-einzelgeraet` (50 Tests gruen, ruff sauber, Dashboard im Browser verifiziert).
+
+- [x] Task 1: Project scaffolding (deps, tool config, packages)
+- [x] Task 2: Configuration (`config.py`)
+- [x] Task 3: Time helpers (`timeutils.py`)
+- [x] Task 4: Event store (SQLite, WAL, aggregates)
+- [x] Task 5: Centroid tracker
+- [x] Task 6: Line crossing + occupancy state
+- [x] Task 7: Detection sources (interface, simulator, factory)
+- [x] Task 8: Counting service
+- [x] Task 9: FastAPI app (lifespan, status, static, websocket hub)
+- [x] Task 10: Stats endpoints, correction, WS broadcast
+- [x] Task 11: Dashboard frontend (dark, live, chart)
+- [x] Task 12: IMX500 camera source (Pi only)
+- [x] Task 13: Deployment (systemd, deploy.sh, README)
+
+## Offene Punkte fuer Pi-Verifikation (vor Ort)
+
+- [ ] `deploy/deploy.sh` ausfuehren, Service-Start pruefen (Firmware-Upload-Delay)
+- [ ] IMX500-Box-Parsing gegen Prototyp `personenzaehler.py` abgleichen (Reihenfolge y0,x0,y1,x1 + Normierung)
+- [ ] Reale Durchgaenge testen; ggf. `INVERT_DIRECTION=true` in Pi-`.env`
+- [ ] Reboot-Ueberlebenstest (`systemctl enable`)
+
+## Tech Debt (bewusste v1-Trade-offs, aus Reviews)
+
+- Correction-Event wird nach In-Memory-`set_count` geschrieben (winziges Audit-Ordering-Fenster)
+- `OccupancyState.count`-Read ohne Lock (CPython-atomar; bei free-threaded Python pruefen)
+- Ein Test greift auf `store._conn` zu (besser: `dump_events()`-Methode)
+- `Centroid`-Alias dreifach definiert (source_base, tracker, counting)
+- Kein Hysterese-Band an der Zaehllinie (Jitter zaehlt mehrfach; per Design durch Nacht-Reset/Korrektur abgefedert)
 
 ## Version 2 — Mehrgeraete-System (spaeter, noch ohne Plan)
 
