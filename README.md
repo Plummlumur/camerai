@@ -31,3 +31,7 @@ One-time on the Pi:
 
 Then from the dev machine: `./deploy/deploy.sh` (override target with
 `PI_HOST=pi@<host>`).
+
+Note: the systemd unit sets `COUNTER_SOURCE=imx500`, but a `.env` file on
+the Pi overrides it — do not copy `.env.example` (which sets `sim`) to the
+Pi unchanged.

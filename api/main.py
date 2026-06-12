@@ -101,6 +101,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
+            pass
+        finally:
             hub.disconnect(websocket)
 
     app.mount("/", StaticFiles(directory=WEB_DIR, html=True), name="web")
