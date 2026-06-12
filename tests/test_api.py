@@ -74,6 +74,12 @@ def test_correction_rejects_negative_values(tmp_path):
     assert response.status_code == 422
 
 
+def test_history_rejects_out_of_range_days(tmp_path):
+    with make_client(tmp_path) as client:
+        assert client.get("/api/stats/history?days=0").status_code == 422
+        assert client.get("/api/stats/history?days=367").status_code == 422
+
+
 def test_correction_is_broadcast_to_websocket_clients(tmp_path):
     with make_client(tmp_path) as client:
         with client.websocket_connect("/ws") as websocket:

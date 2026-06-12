@@ -1,7 +1,7 @@
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, Field
 
 from api.auth import require_auth
@@ -43,7 +43,7 @@ def get_today_stats(request: Request) -> dict:
 
 
 @router.get("/stats/history")
-def get_history(request: Request, days: int = 7) -> dict:
+def get_history(request: Request, days: int = Query(default=7, ge=1, le=366)) -> dict:
     state = request.app.state
     tz = ZoneInfo(state.settings.timezone)
     today = datetime.now(UTC).astimezone(tz).date()
