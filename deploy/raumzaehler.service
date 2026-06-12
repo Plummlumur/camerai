@@ -1,0 +1,18 @@
+[Unit]
+Description=Raumzaehler people counter
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi/raumzaehler
+Environment=COUNTER_SOURCE=imx500
+EnvironmentFile=-/home/pi/raumzaehler/.env
+ExecStart=/home/pi/raumzaehler/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+# IMX500 firmware upload takes several seconds at startup
+TimeoutStartSec=120
+
+[Install]
+WantedBy=multi-user.target
