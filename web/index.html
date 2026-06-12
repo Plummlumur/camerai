@@ -1,5 +1,48 @@
 <!doctype html>
 <html lang="de">
-<head><meta charset="utf-8"><title>Raumzähler</title></head>
-<body><h1>Raumzähler</h1></body>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Raumzähler</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <main class="dashboard">
+    <header>
+      <h1>Raumzähler</h1>
+      <span id="connection" class="status">Verbinde …</span>
+    </header>
+
+    <section class="occupancy-card">
+      <p class="label">Aktuelle Belegung</p>
+      <p id="occupancy" class="occupancy-value">–</p>
+      <div class="day-counts">
+        <div>
+          <span id="today-in" class="count-value">–</span>
+          <span class="count-label">Eintritte heute</span>
+        </div>
+        <div>
+          <span id="today-out" class="count-value">–</span>
+          <span class="count-label">Austritte heute</span>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <p class="label">Verlauf heute</p>
+      <canvas id="hourly-chart" height="120"></canvas>
+    </section>
+
+    <section>
+      <p class="label">Belegung korrigieren</p>
+      <form id="correction-form">
+        <input id="correction-value" type="number" min="0" step="1"
+               placeholder="Neue Belegung" required>
+        <button type="submit">Setzen</button>
+      </form>
+    </section>
+  </main>
+  <script src="/vendor/chart.umd.js"></script>
+  <script src="/app.js"></script>
+</body>
 </html>
