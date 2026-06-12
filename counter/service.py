@@ -40,15 +40,18 @@ class CounterService:
             for direction in self._line_counter.update(tracks):
                 ts_utc = utc_now_iso()
                 occupancy = self._occupancy.apply(direction)
-                self._store.add_event(ts_utc, direction.value, self._sensor_id)
-                self._on_event(
-                    {
-                        "type": "count",
-                        "direction": direction.value,
-                        "occupancy": occupancy,
-                        "ts_utc": ts_utc,
-                    }
-                )
+                try:
+                    self._store.add_event(ts_utc, direction.value, self._sensor_id)
+                    self._on_event(
+                        {
+                            "type": "count",
+                            "direction": direction.value,
+                            "occupancy": occupancy,
+                            "ts_utc": ts_utc,
+                        }
+                    )
+                except Exception:
+                    logger.exception("failed to persist or broadcast count event")
         logger.info("counter service stopped")
 
     def stop(self) -> None:
