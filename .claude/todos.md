@@ -20,12 +20,23 @@ Implementiert auf Branch `feature/v1-einzelgeraet` (50 Tests gruen, ruff sauber,
 - [x] Task 12: IMX500 camera source (Pi only)
 - [x] Task 13: Deployment (systemd, deploy.sh, README)
 
-## Offene Punkte fuer Pi-Verifikation (vor Ort)
+## Pi-Inbetriebnahme (kam-01)
 
-- [ ] `deploy/deploy.sh` ausfuehren, Service-Start pruefen (Firmware-Upload-Delay)
+Erstes Bring-up am 2026-06-15 erfolgreich: Service laeuft mit `COUNTER_SOURCE=imx500`,
+Kamera exklusiv gegriffen, On-Sensor-Inferenz liefert Frames, API/Dashboard erreichbar.
+
+Dabei behoben:
+- [x] Deployment war unvollstaendig (nur `deploy/`-Inhalt im Ziel) -> App lokal nach
+      `/home/pi/raumzaehler` synchronisiert, venv gebaut
+- [x] `python3-opencv` (cv2) fehlte -> per apt installiert; jetzt in README + deploy.sh
+- [x] `deploy.sh`: repo-root-verankert, `PI_HOST=local`-Modus (kein ssh), `.env`-Schutz
+- [x] Counter-Thread-Resilienz: IMX500-Quelle reconnectet mit Backoff statt Thread-Tod
+
+Noch offen (vor Ort):
 - [ ] IMX500-Box-Parsing gegen Prototyp `personenzaehler.py` abgleichen (Reihenfolge y0,x0,y1,x1 + Normierung)
 - [ ] Reale Durchgaenge testen; ggf. `INVERT_DIRECTION=true` in Pi-`.env`
-- [ ] Reboot-Ueberlebenstest (`systemctl enable`)
+- [ ] Reboot-Ueberlebenstest (`systemctl enable` ist gesetzt)
+- [ ] Neuen Code mit Resilienz-Fix deployen (`PI_HOST=local ./deploy/deploy.sh`)
 
 ## Tech Debt (bewusste v1-Trade-offs, aus Reviews)
 

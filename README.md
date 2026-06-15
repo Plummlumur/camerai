@@ -239,17 +239,31 @@ Set via environment variables or a `.env` file (see `.env.example`):
 One-time on the Pi:
 
 ```bash
-sudo apt install -y python3-picamera2 imx500-all
+sudo apt install -y python3-picamera2 imx500-all python3-opencv
 sudo cp deploy/raumzaehler.service /etc/systemd/system/
 sudo systemctl enable raumzaehler
 ```
 
-Then from the dev machine:
+> `python3-opencv` is required: picamera2's IMX500 device module imports `cv2`.
+> Without it the counting thread fails at startup with `No module named 'cv2'`.
+
+Then deploy. From a dev machine over ssh:
 
 ```bash
-./deploy/deploy.sh            # rsync + restart service
-PI_HOST=pi@<host> ./deploy/deploy.sh   # override target
+./deploy/deploy.sh                     # rsync + provision + restart service
+PI_HOST=pi@<host> ./deploy/deploy.sh   # override target host
 ```
+
+Or directly on the Pi itself (no ssh; the checkout lives on the device):
+
+```bash
+PI_HOST=local ./deploy/deploy.sh
+```
+
+The script syncs from the repo root regardless of where you invoke it from, and
+provisioning (`apt-get install python3-opencv`, venv build, `pip install`,
+`systemctl restart`) needs `sudo` — run it in a real terminal so the password
+prompt works.
 
 > **Note:** the systemd unit sets `COUNTER_SOURCE=imx500`, but a `.env` file on
 > the Pi overrides it. Do **not** copy `.env.example` (which sets `sim`) to the
