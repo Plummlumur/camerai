@@ -233,6 +233,18 @@ Set via environment variables or a `.env` file (see `.env.example`):
 | `LINE_AXIS` | `x` | Axis the line crosses (`x` \| `y`) |
 | `IMX500_MODEL_PATH` | `/usr/share/imx500-models/...ssd_mobilenetv2...rpk` | Detection model |
 | `DETECTION_CONFIDENCE` | `0.5` | Minimum detection score |
+| `CAMERA_PREVIEW_ENABLED` | `false` | Stream the camera image to the dashboard (setup/calibration) |
+| `CAMERA_PREVIEW_FPS` | `10` | Preview frame rate (image encode throttle) |
+| `CAMERA_PREVIEW_QUALITY` | `70` | Preview JPEG quality (1..95) |
+
+### Camera preview (setup aid)
+
+By default the dashboard shows only counts — consistent with the privacy-by-design
+baseline that keeps raw video on the sensor. For positioning the counting line you
+can opt in with `CAMERA_PREVIEW_ENABLED=true` (imx500 source only): the dashboard
+then offers a live MJPEG view with the **Zähllinie** overlaid at `LINE_POSITION` /
+`LINE_AXIS`. The image is pulled from the counting loop (the camera allows only one
+holder), so no second camera handle is opened. Leave it off in normal operation.
 
 ## Deployment (Raspberry Pi, Bookworm)
 

@@ -97,3 +97,40 @@ section {
 }
 
 #correction-form button:hover { filter: brightness(1.1); }
+
+.camera-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.camera-wrap img { display: block; width: 100%; height: 100%; object-fit: contain; }
+
+.camera-line {
+  position: absolute;
+  background: var(--accent-out);
+  box-shadow: 0 0 6px rgba(0, 0, 0, 0.7);
+  pointer-events: none;
+}
+
+.camera-line--vertical { top: 0; width: 2px; height: 100%; transform: translateX(-1px); }
+.camera-line--horizontal { left: 0; height: 2px; width: 100%; transform: translateY(-1px); }
+
+#camera-toggle {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-weight: 600;
+  padding: 0.5rem 1.25rem;
+  cursor: pointer;
+}
+
+#camera-toggle:hover { border-color: var(--accent); }
+
+.hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.5; }
+.hint code { background: var(--bg); padding: 0.05rem 0.3rem; border-radius: 4px; }

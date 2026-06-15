@@ -41,6 +41,18 @@
         <button type="submit">Setzen</button>
       </form>
     </section>
+
+    <section id="camera-section" hidden>
+      <p class="label">Kamerabild (Einrichtung)</p>
+      <div id="camera-wrap" class="camera-wrap" hidden>
+        <img id="camera-stream" alt="Live-Kamerabild">
+        <div id="camera-line" class="camera-line"></div>
+      </div>
+      <button id="camera-toggle" type="button">Kamerabild anzeigen</button>
+      <p class="hint">Die rote Linie ist die Zähllinie. Beim Überschreiten wird
+        gezählt. Position über <code>LINE_POSITION</code> / <code>LINE_AXIS</code>
+        einstellen.</p>
+    </section>
   </main>
   <script src="/vendor/chart.umd.js"></script>
   <script src="/app.js"></script>

@@ -20,6 +20,34 @@ def test_status_starts_empty(tmp_path):
     assert body["sensor_id"] == "raum-1"
 
 
+def test_status_reports_camera_preview_disabled_by_default(tmp_path):
+    with make_client(tmp_path) as client:
+        body = client.get("/api/status").json()
+    assert body["preview_enabled"] is False
+    assert body["line_position"] == 0.5
+    assert body["line_axis"] == "x"
+
+
+def test_camera_stream_returns_404_when_preview_disabled(tmp_path):
+    with make_client(tmp_path) as client:
+        response = client.get("/api/camera/stream")
+    assert response.status_code == 404
+
+
+def test_preview_flag_ignored_for_non_camera_source(tmp_path):
+    # Enabling the preview without the imx500 source must not advertise a
+    # preview that can never stream an image.
+    settings = Settings(
+        _env_file=None,
+        counter_source="none",
+        camera_preview_enabled=True,
+        db_path=str(tmp_path / "test.db"),
+    )
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/api/status").json()["preview_enabled"] is False
+        assert client.get("/api/camera/stream").status_code == 404
+
+
 def test_status_restores_occupancy_from_events(tmp_path):
     settings = Settings(_env_file=None, counter_source="none", db_path=str(tmp_path / "test.db"))
     from storage.events import EventStore

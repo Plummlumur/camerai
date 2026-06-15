@@ -4,8 +4,14 @@ const todayOutEl = document.getElementById("today-out");
 const connectionEl = document.getElementById("connection");
 const correctionForm = document.getElementById("correction-form");
 const correctionInput = document.getElementById("correction-value");
+const cameraSection = document.getElementById("camera-section");
+const cameraWrap = document.getElementById("camera-wrap");
+const cameraImg = document.getElementById("camera-stream");
+const cameraLine = document.getElementById("camera-line");
+const cameraToggle = document.getElementById("camera-toggle");
 
 let chart = null;
+let cameraStreaming = false;
 
 function setConnection(live) {
   connectionEl.classList.toggle("status--live", live);
@@ -22,6 +28,35 @@ function renderStatus(status) {
   occupancyEl.textContent = status.occupancy;
   todayInEl.textContent = status.today_in;
   todayOutEl.textContent = status.today_out;
+  cameraSection.hidden = !status.preview_enabled;
+  if (status.preview_enabled) {
+    positionCameraLine(status.line_axis, status.line_position);
+  }
+}
+
+function positionCameraLine(axis, position) {
+  const pct = `${(position * 100).toFixed(1)}%`;
+  if (axis === "y") {
+    cameraLine.className = "camera-line camera-line--horizontal";
+    cameraLine.style.top = pct;
+    cameraLine.style.left = "0";
+  } else {
+    cameraLine.className = "camera-line camera-line--vertical";
+    cameraLine.style.left = pct;
+    cameraLine.style.top = "0";
+  }
+}
+
+function setCameraStreaming(on) {
+  cameraStreaming = on;
+  cameraWrap.hidden = !on;
+  cameraToggle.textContent = on ? "Kamerabild ausblenden" : "Kamerabild anzeigen";
+  if (on) {
+    // cache-bust so a re-open reconnects instead of reusing a closed stream
+    cameraImg.src = `/api/camera/stream?t=${Date.now()}`;
+  } else {
+    cameraImg.removeAttribute("src");
+  }
 }
 
 function renderChart(stats) {
@@ -97,6 +132,8 @@ function connectWebSocket() {
   };
   ws.onmessage = (event) => handleMessage(JSON.parse(event.data));
 }
+
+cameraToggle.addEventListener("click", () => setCameraStreaming(!cameraStreaming));
 
 correctionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
