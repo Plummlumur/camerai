@@ -36,7 +36,14 @@ Noch offen (vor Ort):
 - [ ] IMX500-Box-Parsing gegen Prototyp `personenzaehler.py` abgleichen (Reihenfolge y0,x0,y1,x1 + Normierung)
 - [ ] Reale Durchgaenge testen; ggf. `INVERT_DIRECTION=true` in Pi-`.env`
 - [ ] Reboot-Ueberlebenstest (`systemctl enable` ist gesetzt)
-- [ ] Neuen Code mit Resilienz-Fix deployen (`PI_HOST=local ./deploy/deploy.sh`)
+- [x] Resilienz-Fix + Kamera-Preview deployt und live verifiziert (MJPEG, 640x480)
+
+## Kamera-Preview (Einrichtungshilfe)
+
+Opt-in MJPEG-Stream mit Zaehllinien-Overlay im Dashboard, `CAMERA_PREVIEW_ENABLED`
+(default aus, Privacy). Aus derselben Capture-Schleife wie die Zaehlung (nur ein
+Kamerazugriff moeglich). Aktuell auf kam-01 in `/home/pi/raumzaehler/.env` AKTIVIERT
+fuer die Linienjustage -> nach dem Einrichten auf `false` setzen + Service neu starten.
 
 ## Tech Debt (bewusste v1-Trade-offs, aus Reviews)
 
