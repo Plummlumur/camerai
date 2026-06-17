@@ -5,12 +5,15 @@ from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from api.auth import require_auth
+from api.export import build_history_workbook
 from counter.preview import FrameBuffer
 from timeutils import local_day_bounds_utc, period_bounds, utc_now_iso
+
+XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -76,6 +79,20 @@ def get_history(
             "days": state.store.daily_totals_range(start, end, tz),
         }
     return {"days": state.store.daily_totals(days, tz, today)}
+
+
+@router.get("/export/xlsx")
+def export_xlsx(request: Request) -> Response:
+    state = request.app.state
+    tz = ZoneInfo(state.settings.timezone)
+    today = datetime.now(UTC).astimezone(tz).date()
+    workbook = build_history_workbook(state.store, tz, today)
+    filename = f"raumzaehler_{state.settings.sensor_id}_{today.isoformat()}.xlsx"
+    return Response(
+        content=workbook,
+        media_type=XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 def _mjpeg_frames(buffer: FrameBuffer) -> Iterator[bytes]:
