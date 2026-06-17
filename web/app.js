@@ -11,6 +11,7 @@ const cameraLine = document.getElementById("camera-line");
 const cameraToggle = document.getElementById("camera-toggle");
 const historyButtons = document.getElementById("history-buttons");
 const historySummary = document.getElementById("history-summary");
+const exportButton = document.getElementById("export-xlsx");
 
 let chart = null;
 let historyChart = null;
@@ -190,6 +191,12 @@ cameraToggle.addEventListener("click", () => setCameraStreaming(!cameraStreaming
 historyButtons.addEventListener("click", (event) => {
   const button = event.target.closest("button[data-period]");
   if (button) loadHistory(button.dataset.period);
+});
+
+exportButton.addEventListener("click", () => {
+  // The endpoint sends the workbook as an attachment, so navigating to it
+  // triggers a download without leaving the dashboard.
+  window.location.href = "/api/export/xlsx";
 });
 
 correctionForm.addEventListener("submit", async (event) => {

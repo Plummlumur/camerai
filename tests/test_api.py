@@ -121,6 +121,26 @@ def test_history_rejects_unknown_period(tmp_path):
         assert client.get("/api/stats/history?period=nonsense").status_code == 422
 
 
+def test_export_xlsx_returns_workbook_with_five_named_sheets(tmp_path):
+    import io
+
+    from openpyxl import load_workbook
+
+    with make_client(tmp_path) as client:
+        response = client.get("/api/export/xlsx")
+    assert response.status_code == 200
+    assert "spreadsheetml" in response.headers["content-type"]
+    assert response.headers["content-disposition"].startswith("attachment; filename=")
+    wb = load_workbook(io.BytesIO(response.content))
+    assert wb.sheetnames == [
+        "Gestern",
+        "Laufende Woche",
+        "Letzte Woche",
+        "Laufender Monat",
+        "Letzter Monat",
+    ]
+
+
 def test_correction_is_broadcast_to_websocket_clients(tmp_path):
     with make_client(tmp_path) as client:
         with client.websocket_connect("/ws") as websocket:

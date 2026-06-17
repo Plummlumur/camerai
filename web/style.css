@@ -127,6 +127,20 @@ section {
   font-variant-numeric: tabular-nums;
 }
 
+.export-button {
+  margin-top: 1rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.45rem 1rem;
+  cursor: pointer;
+}
+
+.export-button:hover { border-color: var(--accent); }
+
 .camera-wrap {
   position: relative;
   width: 100%;
