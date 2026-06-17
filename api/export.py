@@ -28,12 +28,14 @@ def build_history_workbook(store: EventStore, tz: ZoneInfo, today: date) -> byte
         start, end = period_bounds(key, today)
         ws = wb.create_sheet(title=title)
         ws.append(["Datum", "Eintritte", "Austritte"])
-        total_in = total_out = 0
-        for row in store.daily_totals_range(start, end, tz):
+        rows = store.daily_totals_range(start, end, tz)
+        for row in rows:
             ws.append([date.fromisoformat(row["date"]), row["in"], row["out"]])
-            total_in += row["in"]
-            total_out += row["out"]
-        ws.append(["Summe", total_in, total_out])
+        # Totals as live SUM formulas (not precomputed) so manual edits to the
+        # daily rows recalculate. Data spans rows 2..(1+len); there is always at
+        # least one day, so the range is never empty.
+        first, last = 2, 1 + len(rows)
+        ws.append(["Summe", f"=SUM(B{first}:B{last})", f"=SUM(C{first}:C{last})"])
         for cell in ws[1] + ws[ws.max_row]:  # bold header and total rows
             cell.font = bold
         ws.column_dimensions["A"].width = 14
