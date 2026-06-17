@@ -243,23 +243,39 @@ By default the dashboard shows only counts — consistent with the privacy-by-de
 baseline that keeps raw video on the sensor. For positioning the counting line you
 can opt in with `CAMERA_PREVIEW_ENABLED=true` (imx500 source only): the dashboard
 then offers a live MJPEG view with the **Zähllinie** overlaid at `LINE_POSITION` /
-`LINE_AXIS`. The image is pulled from the counting loop (the camera allows only one
-holder), so no second camera handle is opened. Leave it off in normal operation.
+`LINE_AXIS`, plus the detected persons drawn as boxes (green) with their counted
+centroid (white dot) — so you can see what the detector picks up and where the
+counted point crosses the line. Boxes/centroids are drawn in the same normalized
+space the counter uses, so they line up with the overlay. The image is pulled from
+the counting loop (the camera allows only one holder), so no second camera handle
+is opened. Leave it off in normal operation.
 
 ## Deployment (Raspberry Pi, Bookworm)
 
-One-time on the Pi:
+### First-time install (interactive)
+
+On the Pi, from the checkout, run the installer. It prompts for every
+deployment-relevant setting (suggesting the current/default value — press Enter
+to accept), then syncs the code, writes the per-device `.env`, installs system
+and Python dependencies, and installs + enables the systemd service:
 
 ```bash
-sudo apt install -y python3-picamera2 imx500-all python3-opencv
-sudo cp deploy/raumzaehler.service /etc/systemd/system/
-sudo systemctl enable raumzaehler
+./deploy/install.sh
 ```
 
-> `python3-opencv` is required: picamera2's IMX500 device module imports `cv2`.
-> Without it the counting thread fails at startup with `No module named 'cv2'`.
+Run it as the service user (e.g. `pi`), **not** with `sudo` — it calls `sudo`
+itself for the apt/systemd steps. Re-running it is safe: it reuses the existing
+`.env` (and the unit's source/port) as the prompt defaults, so it doubles as an
+in-place upgrade. Override the install location with `TARGET_DIR=…`.
 
-Then deploy. From a dev machine over ssh:
+> `python3-opencv` is required (installed by the script): picamera2's IMX500
+> device module imports `cv2`. Without it the counting thread fails at startup
+> with `No module named 'cv2'`.
+
+### Updating code afterwards
+
+For subsequent code-only updates (no config prompts), use the deploy script.
+From a dev machine over ssh:
 
 ```bash
 ./deploy/deploy.sh                     # rsync + provision + restart service
