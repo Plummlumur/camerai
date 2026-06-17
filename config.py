@@ -26,6 +26,13 @@ class Settings(BaseSettings):
     camera_preview_enabled: bool = False
     camera_preview_fps: int = Field(default=10, ge=1, le=60)
     camera_preview_quality: int = Field(default=70, ge=1, le=95)
+    # HTTP Basic Auth (single shared account). Enforced for the whole app
+    # (dashboard, API, WebSocket) only when enabled AND a password hash is set;
+    # off by default so dev/sim and the test suite need no credentials. The
+    # password is stored hashed (see api.auth.hash_password), never plaintext.
+    auth_enabled: bool = False
+    auth_username: str = "admin"
+    auth_password_hash: str = ""
 
 
 @lru_cache

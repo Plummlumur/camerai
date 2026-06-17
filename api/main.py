@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.staticfiles import StaticFiles
 
+from api.auth import BasicAuthMiddleware
 from api.hub import WebSocketHub
 from api.routes import router
 from config import Settings, get_settings
@@ -103,6 +104,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store.close()
 
     app = FastAPI(title="Raumzaehler", lifespan=lifespan)
+    if app_settings.auth_enabled and app_settings.auth_password_hash:
+        app.add_middleware(
+            BasicAuthMiddleware,
+            username=app_settings.auth_username,
+            password_hash=app_settings.auth_password_hash,
+        )
     app.include_router(router)
 
     @app.websocket("/ws")
