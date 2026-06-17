@@ -13,6 +13,7 @@ from api.routes import router
 from config import Settings, get_settings
 from counter.counting import LineCrossingCounter, OccupancyState
 from counter.factory import build_source
+from counter.preview import FrameBuffer
 from counter.service import CounterService
 from counter.tracker import CentroidTracker
 from storage.events import EventStore
@@ -37,6 +38,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         since = occupancy_day_start_utc(datetime.now(UTC), tz, reset_time)
         occupancy = OccupancyState(initial=store.replay_occupancy(since))
         hub = WebSocketHub()
+        # Only the imx500 source produces preview frames; creating a buffer for
+        # any other source would make /api/status report a preview that never
+        # streams an image.
+        frame_buffer = (
+            FrameBuffer()
+            if app_settings.camera_preview_enabled and app_settings.counter_source == "imx500"
+            else None
+        )
         event_queue: asyncio.Queue = asyncio.Queue()
         loop = asyncio.get_running_loop()
 
@@ -47,7 +56,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 pass  # loop already closed during shutdown
 
         service = CounterService(
-            source=build_source(app_settings),
+            source=build_source(app_settings, frame_buffer=frame_buffer),
             tracker=CentroidTracker(),
             line_counter=LineCrossingCounter(
                 line_position=app_settings.line_position,
@@ -82,8 +91,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.store = store
         app.state.occupancy = occupancy
         app.state.hub = hub
+        app.state.frame_buffer = frame_buffer
         yield
         service.stop()
+        if frame_buffer is not None:
+            frame_buffer.close()
         for task in background_tasks:
             task.cancel()
         await asyncio.gather(*background_tasks, return_exceptions=True)

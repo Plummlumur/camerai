@@ -20,12 +20,30 @@ Implementiert auf Branch `feature/v1-einzelgeraet` (50 Tests gruen, ruff sauber,
 - [x] Task 12: IMX500 camera source (Pi only)
 - [x] Task 13: Deployment (systemd, deploy.sh, README)
 
-## Offene Punkte fuer Pi-Verifikation (vor Ort)
+## Pi-Inbetriebnahme (kam-01)
 
-- [ ] `deploy/deploy.sh` ausfuehren, Service-Start pruefen (Firmware-Upload-Delay)
-- [ ] IMX500-Box-Parsing gegen Prototyp `personenzaehler.py` abgleichen (Reihenfolge y0,x0,y1,x1 + Normierung)
-- [ ] Reale Durchgaenge testen; ggf. `INVERT_DIRECTION=true` in Pi-`.env`
-- [ ] Reboot-Ueberlebenstest (`systemctl enable`)
+Erstes Bring-up am 2026-06-15 erfolgreich: Service laeuft mit `COUNTER_SOURCE=imx500`,
+Kamera exklusiv gegriffen, On-Sensor-Inferenz liefert Frames, API/Dashboard erreichbar.
+
+Dabei behoben:
+- [x] Deployment war unvollstaendig (nur `deploy/`-Inhalt im Ziel) -> App lokal nach
+      `/home/pi/raumzaehler` synchronisiert, venv gebaut
+- [x] `python3-opencv` (cv2) fehlte -> per apt installiert; jetzt in README + deploy.sh
+- [x] `deploy.sh`: repo-root-verankert, `PI_HOST=local`-Modus (kein ssh), `.env`-Schutz
+- [x] Counter-Thread-Resilienz: IMX500-Quelle reconnectet mit Backoff statt Thread-Tod
+
+Noch offen (vor Ort):
+- [x] IMX500-Box-Parsing korrigiert (Boxen bereits 0..1-normiert, Reihenfolge y0,x0,y1,x1, Clamping; `_person_detections` geteilt mit Preview-Overlay); durch funktionierende Live-Zaehlung bestaetigt
+- [x] Reale Durchgaenge getestet (2026-06-17 erfolgreich); `INVERT_DIRECTION=false` passt, Richtungszuordnung korrekt
+- [ ] Reboot-Ueberlebenstest (`systemctl enable` ist gesetzt)
+- [x] Resilienz-Fix + Kamera-Preview deployt und live verifiziert (MJPEG, 640x480)
+
+## Kamera-Preview (Einrichtungshilfe)
+
+Opt-in MJPEG-Stream mit Zaehllinien-Overlay im Dashboard, `CAMERA_PREVIEW_ENABLED`
+(default aus, Privacy). Aus derselben Capture-Schleife wie die Zaehlung (nur ein
+Kamerazugriff moeglich). Aktuell auf kam-01 in `/home/pi/raumzaehler/.env` AKTIVIERT
+fuer die Linienjustage -> nach dem Einrichten auf `false` setzen + Service neu starten.
 
 ## Tech Debt (bewusste v1-Trade-offs, aus Reviews)
 

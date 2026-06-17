@@ -233,23 +233,65 @@ Set via environment variables or a `.env` file (see `.env.example`):
 | `LINE_AXIS` | `x` | Axis the line crosses (`x` \| `y`) |
 | `IMX500_MODEL_PATH` | `/usr/share/imx500-models/...ssd_mobilenetv2...rpk` | Detection model |
 | `DETECTION_CONFIDENCE` | `0.5` | Minimum detection score |
+| `CAMERA_PREVIEW_ENABLED` | `false` | Stream the camera image to the dashboard (setup/calibration) |
+| `CAMERA_PREVIEW_FPS` | `10` | Preview frame rate (image encode throttle) |
+| `CAMERA_PREVIEW_QUALITY` | `70` | Preview JPEG quality (1..95) |
+
+### Camera preview (setup aid)
+
+By default the dashboard shows only counts — consistent with the privacy-by-design
+baseline that keeps raw video on the sensor. For positioning the counting line you
+can opt in with `CAMERA_PREVIEW_ENABLED=true` (imx500 source only): the dashboard
+then offers a live MJPEG view with the **Zähllinie** overlaid at `LINE_POSITION` /
+`LINE_AXIS`, plus the detected persons drawn as boxes (green) with their counted
+centroid (white dot) — so you can see what the detector picks up and where the
+counted point crosses the line. Boxes/centroids are drawn in the same normalized
+space the counter uses, so they line up with the overlay. The image is pulled from
+the counting loop (the camera allows only one holder), so no second camera handle
+is opened. Leave it off in normal operation.
 
 ## Deployment (Raspberry Pi, Bookworm)
 
-One-time on the Pi:
+### First-time install (interactive)
+
+On the Pi, from the checkout, run the installer. It prompts for every
+deployment-relevant setting (suggesting the current/default value — press Enter
+to accept), then syncs the code, writes the per-device `.env`, installs system
+and Python dependencies, and installs + enables the systemd service:
 
 ```bash
-sudo apt install -y python3-picamera2 imx500-all
-sudo cp deploy/raumzaehler.service /etc/systemd/system/
-sudo systemctl enable raumzaehler
+./deploy/install.sh
 ```
 
-Then from the dev machine:
+Run it as the service user (e.g. `pi`), **not** with `sudo` — it calls `sudo`
+itself for the apt/systemd steps. Re-running it is safe: it reuses the existing
+`.env` (and the unit's source/port) as the prompt defaults, so it doubles as an
+in-place upgrade. Override the install location with `TARGET_DIR=…`.
+
+> `python3-opencv` is required (installed by the script): picamera2's IMX500
+> device module imports `cv2`. Without it the counting thread fails at startup
+> with `No module named 'cv2'`.
+
+### Updating code afterwards
+
+For subsequent code-only updates (no config prompts), use the deploy script.
+From a dev machine over ssh:
 
 ```bash
-./deploy/deploy.sh            # rsync + restart service
-PI_HOST=pi@<host> ./deploy/deploy.sh   # override target
+./deploy/deploy.sh                     # rsync + provision + restart service
+PI_HOST=pi@<host> ./deploy/deploy.sh   # override target host
 ```
+
+Or directly on the Pi itself (no ssh; the checkout lives on the device):
+
+```bash
+PI_HOST=local ./deploy/deploy.sh
+```
+
+The script syncs from the repo root regardless of where you invoke it from, and
+provisioning (`apt-get install python3-opencv`, venv build, `pip install`,
+`systemctl restart`) needs `sudo` — run it in a real terminal so the password
+prompt works.
 
 > **Note:** the systemd unit sets `COUNTER_SOURCE=imx500`, but a `.env` file on
 > the Pi overrides it. Do **not** copy `.env.example` (which sets `sim`) to the

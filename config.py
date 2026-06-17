@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -18,6 +19,13 @@ class Settings(BaseSettings):
         "/usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk"
     )
     detection_confidence: float = 0.5
+    # Camera preview (MJPEG) for setup/calibration. Off by default: the
+    # privacy-by-design baseline keeps raw video on the sensor. Enabling this
+    # streams the camera image (with the counting line overlaid) to the
+    # dashboard. Only effective with COUNTER_SOURCE=imx500.
+    camera_preview_enabled: bool = False
+    camera_preview_fps: int = Field(default=10, ge=1, le=60)
+    camera_preview_quality: int = Field(default=70, ge=1, le=95)
 
 
 @lru_cache

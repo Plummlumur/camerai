@@ -79,12 +79,17 @@ class EventStore:
         return buckets
 
     def daily_totals(self, days: int, tz: ZoneInfo, today: date) -> list[dict]:
+        return self.daily_totals_range(today - timedelta(days=days - 1), today, tz)
+
+    def daily_totals_range(self, start: date, end: date, tz: ZoneInfo) -> list[dict]:
+        """In/out totals per local day across the inclusive ``start..end`` range."""
         result = []
-        for offset in range(days - 1, -1, -1):
-            day = today - timedelta(days=offset)
-            start, end = local_day_bounds_utc(day, tz)
-            counts = self.counts_between(start, end)
+        day = start
+        while day <= end:
+            day_start, day_end = local_day_bounds_utc(day, tz)
+            counts = self.counts_between(day_start, day_end)
             result.append({"date": day.isoformat(), "in": counts["in"], "out": counts["out"]})
+            day += timedelta(days=1)
         return result
 
     def close(self) -> None:

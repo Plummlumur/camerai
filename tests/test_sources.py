@@ -34,6 +34,13 @@ def test_factory_builds_sim_and_none():
     assert isinstance(build_source(Settings(_env_file=None, counter_source="none")), NullSource)
 
 
+def test_factory_accepts_frame_buffer_for_non_camera_sources():
+    from counter.preview import FrameBuffer
+
+    source = build_source(Settings(_env_file=None, counter_source="sim"), FrameBuffer())
+    assert isinstance(source, SimulatedSource)
+
+
 def test_factory_rejects_unknown_source():
     with pytest.raises(ValueError, match="unknown COUNTER_SOURCE"):
         build_source(Settings(_env_file=None, counter_source="kaputt"))

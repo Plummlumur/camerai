@@ -34,12 +34,40 @@
     </section>
 
     <section>
+      <p class="label">Verlauf (Zeitraum)</p>
+      <div id="history-buttons" class="button-group">
+        <button type="button" data-period="yesterday">Gestern</button>
+        <button type="button" data-period="current_week">Laufende Woche</button>
+        <button type="button" data-period="last_week">Letzte Woche</button>
+        <button type="button" data-period="current_month">Laufender Monat</button>
+        <button type="button" data-period="last_month">Letzter Monat</button>
+      </div>
+      <p id="history-summary" class="history-summary"></p>
+      <canvas id="history-chart" height="120"></canvas>
+    </section>
+
+    <section>
       <p class="label">Belegung korrigieren</p>
       <form id="correction-form">
         <input id="correction-value" type="number" min="0" step="1"
                placeholder="Neue Belegung" required>
         <button type="submit">Setzen</button>
       </form>
+    </section>
+
+    <section id="camera-section" hidden>
+      <p class="label">Kamerabild (Einrichtung)</p>
+      <div id="camera-wrap" class="camera-wrap" hidden>
+        <img id="camera-stream" alt="Live-Kamerabild">
+        <div id="camera-line" class="camera-line"></div>
+      </div>
+      <button id="camera-toggle" type="button">Kamerabild anzeigen</button>
+      <p class="hint">
+        <span class="legend legend--box">Grüne Box</span> = erkannte Person,
+        <span class="legend legend--dot">weißer Punkt</span> = gezählter Mittelpunkt,
+        <span class="legend legend--line">rote Linie</span> = Zähllinie. Gezählt
+        wird, wenn der Mittelpunkt die Linie überschreitet. Position über
+        <code>LINE_POSITION</code> / <code>LINE_AXIS</code> einstellen.</p>
     </section>
   </main>
   <script src="/vendor/chart.umd.js"></script>
