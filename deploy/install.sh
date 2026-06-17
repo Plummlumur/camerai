@@ -91,6 +91,37 @@ port_default() {
   [ -f "$UNIT_PATH" ] && val="$(grep -oE -- '--port [0-9]+' "$UNIT_PATH" | tail -1 | awk '{print $2}')"
   printf '%s' "${val:-8000}"
 }
+tls_default() {
+  if [ -f "$UNIT_PATH" ] && grep -q -- '--ssl-certfile' "$UNIT_PATH"; then
+    printf 'true'
+  else
+    printf 'false'
+  fi
+}
+
+# ask_secret "Prompt" -> echoes a password entered silently (twice, must match).
+# Empty when there is no terminal (so a non-interactive re-run keeps the old hash).
+ask_secret() {
+  local prompt="$1" first second
+  if ! { [ -t 0 ] && [ -r /dev/tty ]; }; then
+    printf ''
+    return
+  fi
+  while true; do
+    read -r -s -p "$prompt: " first </dev/tty; echo >&2
+    read -r -s -p "$prompt (Wiederholung): " second </dev/tty; echo >&2
+    [ "$first" = "$second" ] && { printf '%s' "$first"; return; }
+    echo "  Passwoerter stimmen nicht ueberein, bitte erneut." >&2
+  done
+}
+
+# compute_password_hash <plaintext> -> PBKDF2 hash via the app's own hashing code
+# (stdlib only, so the not-yet-built target venv is not needed). Password is
+# passed via the environment, not argv, to keep it out of the process list.
+compute_password_hash() {
+  RZ_PW="$1" PYTHONPATH="$REPO_ROOT" python3 -c \
+    'import os; from api.auth import hash_password; print(hash_password(os.environ["RZ_PW"]))'
+}
 
 # --- gather configuration ---------------------------------------------------
 
@@ -114,6 +145,33 @@ INVERT_DIRECTION="$(ask_bool  "Richtung invertieren"    "$(env_default INVERT_DI
 DETECTION_CONFIDENCE="$(ask   "Erkennungs-Schwelle (0..1)" "$(env_default DETECTION_CONFIDENCE 0.5)")"
 CAMERA_PREVIEW_ENABLED="$(ask_bool "Kamera-Preview aktivieren (Einrichtungshilfe)" "$(env_default CAMERA_PREVIEW_ENABLED false)")"
 
+# Authentication (HTTP Basic, single shared account). The password is hashed;
+# an empty entry on a re-run keeps the existing hash.
+AUTH_ENABLED="$(ask_bool "Authentifizierung aktivieren (HTTP Basic Auth)" "$(env_default AUTH_ENABLED false)")"
+AUTH_USERNAME="$(env_default AUTH_USERNAME admin)"
+AUTH_PASSWORD_HASH="$(env_default AUTH_PASSWORD_HASH '')"
+if [ "$AUTH_ENABLED" = "true" ]; then
+  AUTH_USERNAME="$(ask "Benutzername" "$AUTH_USERNAME")"
+  if [ -n "$AUTH_PASSWORD_HASH" ]; then
+    _pw="$(ask_secret "Passwort (leer lassen = bestehendes behalten)")"
+  else
+    _pw="$(ask_secret "Passwort")"
+  fi
+  if [ -n "$_pw" ]; then
+    AUTH_PASSWORD_HASH="$(compute_password_hash "$_pw")"
+  elif [ -z "$AUTH_PASSWORD_HASH" ]; then
+    echo "FEHLER: Authentifizierung aktiviert, aber kein Passwort gesetzt." >&2
+    exit 1
+  fi
+  unset _pw
+fi
+
+# HTTPS via a self-signed certificate (generated below if missing).
+TLS_ENABLED="$(ask_bool "HTTPS aktivieren (Self-Signed-Zertifikat)" "$(tls_default)")"
+CERT_DIR="$TARGET_DIR/certs"
+TLS_CERT="$CERT_DIR/cert.pem"
+TLS_KEY="$CERT_DIR/key.pem"
+
 # Non-prompted, kept at current/default values (written so the .env is complete).
 DB_PATH="$(env_default DB_PATH data/raumzaehler.db)"
 IMX500_MODEL_PATH="$(env_default IMX500_MODEL_PATH /usr/share/imx500-models/imx500_network_ssd_mobilenetv2_fpnlite_320x320_pp.rpk)"
@@ -131,6 +189,8 @@ cat <<SUMMARY
   Zaehllinie       : Achse $LINE_AXIS @ $LINE_POSITION (invertiert: $INVERT_DIRECTION)
   Erkennungs-Conf  : $DETECTION_CONFIDENCE
   Kamera-Preview   : $CAMERA_PREVIEW_ENABLED
+  Authentifizierung: $AUTH_ENABLED$([ "$AUTH_ENABLED" = true ] && echo " (Benutzer: $AUTH_USERNAME)")
+  HTTPS            : $TLS_ENABLED
 SUMMARY
 echo
 if [ "$(ask "Fortfahren?" "j")" != "j" ]; then
@@ -186,6 +246,12 @@ NIGHTLY_RESET_TIME=$NIGHTLY_RESET_TIME
 CAMERA_PREVIEW_ENABLED=$CAMERA_PREVIEW_ENABLED
 CAMERA_PREVIEW_FPS=$CAMERA_PREVIEW_FPS
 CAMERA_PREVIEW_QUALITY=$CAMERA_PREVIEW_QUALITY
+
+# HTTP Basic Auth (single shared account). Password stored hashed (PBKDF2),
+# never plaintext. Enforced only when enabled AND a hash is present.
+AUTH_ENABLED=$AUTH_ENABLED
+AUTH_USERNAME=$AUTH_USERNAME
+AUTH_PASSWORD_HASH=$AUTH_PASSWORD_HASH
 ENV
 
 # --- 3. system deps (apt) ---------------------------------------------------
@@ -202,6 +268,26 @@ python3 -m venv --system-site-packages "$TARGET_DIR/.venv"
 "$TARGET_DIR/.venv/bin/pip" install --upgrade pip >/dev/null
 "$TARGET_DIR/.venv/bin/pip" install -r "$TARGET_DIR/requirements.txt"
 
+# --- 4b. self-signed TLS certificate ----------------------------------------
+
+SSL_ARGS=""
+if [ "$TLS_ENABLED" = "true" ]; then
+  if [ ! -f "$TLS_CERT" ] || [ ! -f "$TLS_KEY" ]; then
+    echo "-> Erzeuge Self-Signed-Zertifikat ($CERT_DIR)"
+    mkdir -p "$CERT_DIR"
+    host="$(hostname)"
+    ip="$(hostname -I | awk '{print $1}')"
+    openssl req -x509 -newkey rsa:2048 -nodes -days 3650 \
+      -keyout "$TLS_KEY" -out "$TLS_CERT" \
+      -subj "/CN=$host" \
+      -addext "subjectAltName=DNS:$host,DNS:$host.local,DNS:localhost,IP:127.0.0.1${ip:+,IP:$ip}"
+    chmod 600 "$TLS_KEY"
+  else
+    echo "-> Vorhandenes Zertifikat behalten ($CERT_DIR)"
+  fi
+  SSL_ARGS=" --ssl-keyfile $TLS_KEY --ssl-certfile $TLS_CERT"
+fi
+
 # --- 5. systemd unit --------------------------------------------------------
 
 echo "-> Installiere systemd-Unit $UNIT_PATH (sudo)"
@@ -216,7 +302,7 @@ User=$SERVICE_USER
 WorkingDirectory=$TARGET_DIR
 Environment=COUNTER_SOURCE=$COUNTER_SOURCE
 EnvironmentFile=-$ENV_FILE
-ExecStart=$TARGET_DIR/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port $HTTP_PORT
+ExecStart=$TARGET_DIR/.venv/bin/uvicorn api.main:app --host 0.0.0.0 --port $HTTP_PORT$SSL_ARGS
 Restart=on-failure
 RestartSec=5
 # IMX500 firmware upload takes several seconds at startup
@@ -232,5 +318,9 @@ sudo systemctl restart "$SERVICE_NAME"
 
 echo
 echo "== Fertig =="
-echo "Dashboard: http://$(hostname -I | awk '{print $1}'):$HTTP_PORT/"
+SCHEME=http
+[ "$TLS_ENABLED" = "true" ] && SCHEME=https
+echo "Dashboard: $SCHEME://$(hostname -I | awk '{print $1}'):$HTTP_PORT/"
+[ "$TLS_ENABLED" = "true" ] && echo "  (Self-Signed: der Browser warnt einmalig — Ausnahme bestaetigen.)"
+[ "$AUTH_ENABLED" = "true" ] && echo "  Login: Benutzer '$AUTH_USERNAME'."
 echo "Status:    systemctl status $SERVICE_NAME"

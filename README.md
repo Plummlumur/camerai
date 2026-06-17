@@ -272,6 +272,25 @@ in-place upgrade. Override the install location with `TARGET_DIR=…`.
 > device module imports `cv2`. Without it the counting thread fails at startup
 > with `No module named 'cv2'`.
 
+### Authentication and HTTPS
+
+The installer also offers **HTTP Basic Auth** (single shared account) and
+**HTTPS** (self-signed certificate):
+
+- Enabling auth prompts for a username and password; the password is stored
+  **hashed** (PBKDF2-HMAC-SHA256) in the `.env` as `AUTH_PASSWORD_HASH`, never
+  in plaintext. When enabled, every request — dashboard, API, and WebSocket —
+  requires the credentials (enforced by `BasicAuthMiddleware`). A blank password
+  on a re-run keeps the existing hash. Always pair auth with HTTPS so the
+  credentials are not sent in the clear.
+- Enabling HTTPS generates a self-signed cert under `<TARGET_DIR>/certs/` and
+  adds `--ssl-keyfile`/`--ssl-certfile` to the systemd unit. Browsers warn once
+  about the self-signed cert — confirm the exception. The dashboard already
+  uses `wss://` automatically when served over HTTPS.
+
+Both are off by default (dev/sim and the test suite need no credentials and run
+plain HTTP).
+
 ### Updating code afterwards
 
 For subsequent code-only updates (no config prompts), use the deploy script.
