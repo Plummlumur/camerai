@@ -35,7 +35,7 @@ Dabei behoben:
 Noch offen (vor Ort):
 - [x] IMX500-Box-Parsing korrigiert (Boxen bereits 0..1-normiert, Reihenfolge y0,x0,y1,x1, Clamping; `_person_detections` geteilt mit Preview-Overlay); durch funktionierende Live-Zaehlung bestaetigt
 - [x] Reale Durchgaenge getestet (2026-06-17 erfolgreich); `INVERT_DIRECTION=false` passt, Richtungszuordnung korrekt
-- [ ] Reboot-Ueberlebenstest (`systemctl enable` ist gesetzt)
+- [x] Reboot-Ueberlebenstest bestanden (2026-06-17): Service-Autostart nach Boot, DB integer, alle vor dem Reboot committeten Events unversehrt (WAL + synchronous=FULL), Belegung korrekt per Replay rekonstruiert
 - [x] Resilienz-Fix + Kamera-Preview deployt und live verifiziert (MJPEG, 640x480)
 
 ## Kamera-Preview (Einrichtungshilfe)
