@@ -32,14 +32,15 @@ def test_yesterday_sheet_has_header_data_and_total(tmp_path):
     assert [c.value for c in ws[1]] == ["Datum", "Eintritte", "Austritte"]
     assert ws.cell(2, 1).value.date() == date(2026, 6, 16)  # single day row
     assert [ws.cell(2, 2).value, ws.cell(2, 3).value] == [2, 1]
-    assert [c.value for c in ws[ws.max_row]] == ["Summe", 2, 1]
+    # Totals are live SUM formulas, not precomputed values (one day -> B2:B2).
+    assert [c.value for c in ws[ws.max_row]] == ["Summe", "=SUM(B2:B2)", "=SUM(C2:C2)"]
     store.close()
 
 
 def test_last_week_sheet_spans_seven_days(tmp_path):
     store = EventStore(tmp_path / "t.db")
     ws = _load(store, date(2026, 6, 17))["Letzte Woche"]
-    # header + 7 day rows (Mon..Sun) + Summe
+    # header + 7 day rows (Mon..Sun) + Summe; the SUM spans exactly the 7 rows.
     assert ws.max_row == 9
-    assert [c.value for c in ws[ws.max_row]] == ["Summe", 0, 0]
+    assert [c.value for c in ws[ws.max_row]] == ["Summe", "=SUM(B2:B8)", "=SUM(C2:C8)"]
     store.close()
