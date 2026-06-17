@@ -34,6 +34,19 @@
     </section>
 
     <section>
+      <p class="label">Verlauf (Zeitraum)</p>
+      <div id="history-buttons" class="button-group">
+        <button type="button" data-period="yesterday">Gestern</button>
+        <button type="button" data-period="current_week">Laufende Woche</button>
+        <button type="button" data-period="last_week">Letzte Woche</button>
+        <button type="button" data-period="current_month">Laufender Monat</button>
+        <button type="button" data-period="last_month">Letzter Monat</button>
+      </div>
+      <p id="history-summary" class="history-summary"></p>
+      <canvas id="history-chart" height="120"></canvas>
+    </section>
+
+    <section>
       <p class="label">Belegung korrigieren</p>
       <form id="correction-form">
         <input id="correction-value" type="number" min="0" step="1"

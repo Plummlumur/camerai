@@ -1,5 +1,7 @@
 from collections.abc import Iterator
 from datetime import UTC, datetime
+from enum import StrEnum
+from typing import Annotated
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -8,7 +10,7 @@ from pydantic import BaseModel, Field
 
 from api.auth import require_auth
 from counter.preview import FrameBuffer
-from timeutils import local_day_bounds_utc, utc_now_iso
+from timeutils import local_day_bounds_utc, period_bounds, utc_now_iso
 
 router = APIRouter(prefix="/api", dependencies=[Depends(require_auth)])
 
@@ -48,11 +50,31 @@ def get_today_stats(request: Request) -> dict:
     return {"date": today.isoformat(), "hours": state.store.hourly_counts(start, end, tz)}
 
 
+class HistoryPeriod(StrEnum):
+    yesterday = "yesterday"
+    current_week = "current_week"
+    last_week = "last_week"
+    current_month = "current_month"
+    last_month = "last_month"
+
+
 @router.get("/stats/history")
-def get_history(request: Request, days: int = Query(default=7, ge=1, le=366)) -> dict:
+def get_history(
+    request: Request,
+    days: int = Query(default=7, ge=1, le=366),
+    period: Annotated[HistoryPeriod | None, Query()] = None,
+) -> dict:
     state = request.app.state
     tz = ZoneInfo(state.settings.timezone)
     today = datetime.now(UTC).astimezone(tz).date()
+    if period is not None:
+        start, end = period_bounds(period.value, today)
+        return {
+            "period": period.value,
+            "start": start.isoformat(),
+            "end": end.isoformat(),
+            "days": state.store.daily_totals_range(start, end, tz),
+        }
     return {"days": state.store.daily_totals(days, tz, today)}
 
 

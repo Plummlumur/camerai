@@ -90,9 +90,7 @@ def test_correction_sets_occupancy_and_writes_event(tmp_path):
         assert response.json()["occupancy"] == 7
         assert client.get("/api/status").json()["occupancy"] == 7
         store = client.app.state.store
-        rows = store._conn.execute(
-            "SELECT direction, value FROM events ORDER BY id"
-        ).fetchall()
+        rows = store._conn.execute("SELECT direction, value FROM events ORDER BY id").fetchall()
     assert rows == [("correction", 7)]
 
 
@@ -106,6 +104,21 @@ def test_history_rejects_out_of_range_days(tmp_path):
     with make_client(tmp_path) as client:
         assert client.get("/api/stats/history?days=0").status_code == 422
         assert client.get("/api/stats/history?days=367").status_code == 422
+
+
+def test_history_period_returns_range_bounds(tmp_path):
+    with make_client(tmp_path) as client:
+        body = client.get("/api/stats/history?period=last_week").json()
+    assert body["period"] == "last_week"
+    # Monday..Sunday, inclusive, one daily bucket each.
+    assert len(body["days"]) == 7
+    assert body["days"][0]["date"] == body["start"]
+    assert body["days"][-1]["date"] == body["end"]
+
+
+def test_history_rejects_unknown_period(tmp_path):
+    with make_client(tmp_path) as client:
+        assert client.get("/api/stats/history?period=nonsense").status_code == 422
 
 
 def test_correction_is_broadcast_to_websocket_clients(tmp_path):

@@ -5,6 +5,7 @@ from timeutils import (
     local_day_bounds_utc,
     occupancy_day_start_utc,
     parse_reset_time,
+    period_bounds,
     seconds_until_next_reset,
     utc_now_iso,
 )
@@ -39,6 +40,23 @@ def test_occupancy_day_start_before_and_after_reset():
     # 03:00 local (01:00 UTC) -> boundary is YESTERDAY 04:00 local
     before = datetime(2026, 6, 12, 1, 0, tzinfo=UTC)
     assert occupancy_day_start_utc(before, VIENNA, reset) == "2026-06-11T02:00:00+00:00"
+
+
+def test_period_bounds():
+    # 2026-06-17 is a Wednesday (ISO weekday 2), June has 30 days, May 31.
+    today = date(2026, 6, 17)
+    assert period_bounds("yesterday", today) == (date(2026, 6, 16), date(2026, 6, 16))
+    assert period_bounds("current_week", today) == (date(2026, 6, 15), date(2026, 6, 17))
+    assert period_bounds("last_week", today) == (date(2026, 6, 8), date(2026, 6, 14))
+    assert period_bounds("current_month", today) == (date(2026, 6, 1), date(2026, 6, 17))
+    assert period_bounds("last_month", today) == (date(2026, 5, 1), date(2026, 5, 31))
+
+
+def test_period_bounds_rejects_unknown():
+    import pytest
+
+    with pytest.raises(ValueError):
+        period_bounds("nonsense", date(2026, 6, 17))
 
 
 def test_seconds_until_next_reset():

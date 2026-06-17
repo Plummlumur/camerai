@@ -76,6 +76,18 @@ def test_daily_totals(store):
     ]
 
 
+def test_daily_totals_range_inclusive(store):
+    store.add_event("2026-06-08T10:00:00+00:00", "in", "raum-1")
+    store.add_event("2026-06-10T10:00:00+00:00", "in", "raum-1")
+    store.add_event("2026-06-10T11:00:00+00:00", "out", "raum-1")
+    days = store.daily_totals_range(date(2026, 6, 8), date(2026, 6, 10), VIENNA)
+    assert days == [
+        {"date": "2026-06-08", "in": 1, "out": 0},
+        {"date": "2026-06-09", "in": 0, "out": 0},
+        {"date": "2026-06-10", "in": 1, "out": 1},
+    ]
+
+
 def test_replay_occupancy_on_empty_store(store):
     assert store.replay_occupancy(T.format(0, 0)) == 0
 

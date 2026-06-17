@@ -9,9 +9,15 @@ const cameraWrap = document.getElementById("camera-wrap");
 const cameraImg = document.getElementById("camera-stream");
 const cameraLine = document.getElementById("camera-line");
 const cameraToggle = document.getElementById("camera-toggle");
+const historyButtons = document.getElementById("history-buttons");
+const historySummary = document.getElementById("history-summary");
 
 let chart = null;
+let historyChart = null;
 let cameraStreaming = false;
+let activePeriod = "current_week";
+// Periods that include today and therefore change as new counts arrive.
+const LIVE_PERIODS = new Set(["current_week", "current_month"]);
 
 function setConnection(live) {
   connectionEl.classList.toggle("status--live", live);
@@ -59,28 +65,23 @@ function setCameraStreaming(on) {
   }
 }
 
-function renderChart(stats) {
-  const labels = stats.hours.map((h) => `${String(h.hour).padStart(2, "0")}`);
-  const datasets = [
-    {
-      label: "Eintritte",
-      data: stats.hours.map((h) => h.in),
-      backgroundColor: "#4cc38a",
-      borderRadius: 3,
-    },
-    {
-      label: "Austritte",
-      data: stats.hours.map((h) => h.out),
-      backgroundColor: "#e5704c",
-      borderRadius: 3,
-    },
-  ];
-  if (chart) {
-    chart.data = { labels, datasets };
-    chart.update();
-    return;
+function barChart(canvasId, existing, labels, inData, outData, maxTicks) {
+  if (existing) {
+    // Replace only the data, not the datasets, so a visibility toggled via the
+    // legend survives live refreshes.
+    existing.data.labels = labels;
+    existing.data.datasets[0].data = inData;
+    existing.data.datasets[1].data = outData;
+    existing.update();
+    return existing;
   }
-  chart = new Chart(document.getElementById("hourly-chart"), {
+  const datasets = [
+    { label: "Eintritte", data: inData, backgroundColor: "#4cc38a", borderRadius: 3 },
+    // Exits hidden by default: the relevant trend is visitors entering. The
+    // legend stays clickable to reveal exits when needed.
+    { label: "Austritte", data: outData, backgroundColor: "#e5704c", borderRadius: 3, hidden: true },
+  ];
+  return new Chart(document.getElementById(canvasId), {
     type: "bar",
     data: { labels, datasets },
     options: {
@@ -89,7 +90,7 @@ function renderChart(stats) {
       scales: {
         x: {
           grid: { display: false },
-          ticks: { color: "#8b95a3", maxTicksLimit: 12 },
+          ticks: { color: "#8b95a3", maxTicksLimit: maxTicks },
         },
         y: {
           beginAtZero: true,
@@ -100,6 +101,54 @@ function renderChart(stats) {
       plugins: { legend: { labels: { color: "#e6e9ee", boxWidth: 12 } } },
     },
   });
+}
+
+function renderChart(stats) {
+  const labels = stats.hours.map((h) => String(h.hour).padStart(2, "0"));
+  chart = barChart(
+    "hourly-chart",
+    chart,
+    labels,
+    stats.hours.map((h) => h.in),
+    stats.hours.map((h) => h.out),
+    12,
+  );
+}
+
+function formatDay(iso) {
+  const [, month, day] = iso.split("-");
+  return `${day}.${month}.`;
+}
+
+function renderHistory(data) {
+  const labels = data.days.map((d) => formatDay(d.date));
+  historyChart = barChart(
+    "history-chart",
+    historyChart,
+    labels,
+    data.days.map((d) => d.in),
+    data.days.map((d) => d.out),
+    16,
+  );
+  const totalIn = data.days.reduce((sum, d) => sum + d.in, 0);
+  const totalOut = data.days.reduce((sum, d) => sum + d.out, 0);
+  const range =
+    data.start === data.end
+      ? formatDay(data.start)
+      : `${formatDay(data.start)}–${formatDay(data.end)}`;
+  historySummary.textContent = `${range} · ${totalIn} Eintritte · ${totalOut} Austritte`;
+}
+
+async function loadHistory(period) {
+  activePeriod = period;
+  for (const button of historyButtons.querySelectorAll("button")) {
+    button.classList.toggle("active", button.dataset.period === period);
+  }
+  try {
+    renderHistory(await fetchJson(`/api/stats/history?period=${period}`));
+  } catch (error) {
+    console.error("history failed", error);
+  }
 }
 
 async function refresh() {
@@ -119,7 +168,10 @@ function handleMessage(message) {
   if (typeof message.occupancy === "number") {
     occupancyEl.textContent = message.occupancy;
   }
-  if (message.type === "count") refresh();
+  if (message.type === "count") {
+    refresh();
+    if (LIVE_PERIODS.has(activePeriod)) loadHistory(activePeriod);
+  }
 }
 
 function connectWebSocket() {
@@ -135,6 +187,11 @@ function connectWebSocket() {
 
 cameraToggle.addEventListener("click", () => setCameraStreaming(!cameraStreaming));
 
+historyButtons.addEventListener("click", (event) => {
+  const button = event.target.closest("button[data-period]");
+  if (button) loadHistory(button.dataset.period);
+});
+
 correctionForm.addEventListener("submit", async (event) => {
   event.preventDefault();
   const value = Number(correctionInput.value);
@@ -148,5 +205,6 @@ correctionForm.addEventListener("submit", async (event) => {
 });
 
 refresh();
+loadHistory(activePeriod);
 connectWebSocket();
 setInterval(refresh, 60000);
