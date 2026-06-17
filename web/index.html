@@ -49,9 +49,12 @@
         <div id="camera-line" class="camera-line"></div>
       </div>
       <button id="camera-toggle" type="button">Kamerabild anzeigen</button>
-      <p class="hint">Die rote Linie ist die Zähllinie. Beim Überschreiten wird
-        gezählt. Position über <code>LINE_POSITION</code> / <code>LINE_AXIS</code>
-        einstellen.</p>
+      <p class="hint">
+        <span class="legend legend--box">Grüne Box</span> = erkannte Person,
+        <span class="legend legend--dot">weißer Punkt</span> = gezählter Mittelpunkt,
+        <span class="legend legend--line">rote Linie</span> = Zähllinie. Gezählt
+        wird, wenn der Mittelpunkt die Linie überschreitet. Position über
+        <code>LINE_POSITION</code> / <code>LINE_AXIS</code> einstellen.</p>
     </section>
   </main>
   <script src="/vendor/chart.umd.js"></script>

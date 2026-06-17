@@ -87,34 +87,70 @@ class Imx500Source:
                         metadata = request.get_metadata()
                         now = time.monotonic()
                         if encode_interval and now - last_encode >= encode_interval:
-                            self._publish_frame(request)
+                            self._publish_frame(request, imx500, metadata)
                             last_encode = now
                     finally:
                         request.release()
-                yield self._centroids(imx500, metadata, input_width, input_height)
+                yield self._centroids(imx500, metadata)
         finally:
             picam2.stop()
 
-    def _centroids(self, imx500, metadata, input_width, input_height) -> list[Centroid]:
+    def _person_detections(self, imx500, metadata) -> list:
+        """Raw ``[y0, x0, y1, x1]`` boxes of persons above the confidence threshold.
+
+        Boxes are already normalized to 0..1 of the frame (this model carries no
+        ``bbox_normalization``/``bbox_order`` intrinsics, so picamera2 returns the
+        SSD post-processed coordinates as-is). They are shared by centroid
+        extraction and preview box drawing so both reflect the same detections.
+        """
         outputs = imx500.get_outputs(metadata, add_batch=True)
         if outputs is None:
             return []
         boxes, scores, classes = outputs[0][0], outputs[1][0], outputs[2][0]
+        return [
+            box
+            for box, score, class_id in zip(boxes, scores, classes, strict=False)
+            if int(class_id) == self._person_class_id and score >= self._confidence
+        ]
+
+    def _centroids(self, imx500, metadata) -> list[Centroid]:
         centroids: list[Centroid] = []
-        for box, score, class_id in zip(boxes, scores, classes, strict=False):
-            if int(class_id) != self._person_class_id or score < self._confidence:
-                continue
+        for box in self._person_detections(imx500, metadata):
             y0, x0, y1, x1 = box
-            centroids.append(
-                (
-                    float((x0 + x1) / 2 / input_width),
-                    float((y0 + y1) / 2 / input_height),
-                )
-            )
+            cx = min(max((x0 + x1) / 2, 0.0), 1.0)
+            cy = min(max((y0 + y1) / 2, 0.0), 1.0)
+            centroids.append((float(cx), float(cy)))
         return centroids
 
-    def _publish_frame(self, request) -> None:
+    @staticmethod
+    def _box_to_pixels(box, img_width, img_height) -> tuple:
+        """Map a normalized ``[y0, x0, y1, x1]`` detection box to image pixels.
+
+        Boxes are 0..1 of the frame, so they scale directly to the preview image
+        size — matching the normalization the counter applies to centroids, so
+        drawn boxes/centroids align with the counting line shown over the image.
+        """
+        y0, x0, y1, x1 = box
+        return (
+            x0 * img_width,
+            y0 * img_height,
+            x1 * img_width,
+            y1 * img_height,
+        )
+
+    def _publish_frame(self, request, imx500, metadata) -> None:
+        from PIL import ImageDraw
+
         image = request.make_image("main")  # PIL image, format conversion handled
+        draw = ImageDraw.Draw(image)
+        img_width, img_height = image.size
+        for box in self._person_detections(imx500, metadata):
+            left, top, right, bottom = self._box_to_pixels(box, img_width, img_height)
+            draw.rectangle((left, top, right, bottom), outline=(76, 195, 138), width=2)
+            cx, cy = (left + right) / 2, (top + bottom) / 2
+            draw.ellipse(
+                (cx - 4, cy - 4, cx + 4, cy + 4), fill=(255, 255, 255), outline=(20, 20, 20)
+            )
         buf = io.BytesIO()
         image.save(buf, format="JPEG", quality=self._preview_quality)
         self._frame_buffer.set(buf.getvalue())

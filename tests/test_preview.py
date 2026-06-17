@@ -59,19 +59,44 @@ class _FakeImx500:
 
 
 def test_centroids_normalizes_box_centers():
-    # one box [y0, x0, y1, x1] -> center (160, 80) in a 320x320 input
-    outputs = ([[[0.0, 0.0, 160.0, 320.0]]], [[0.9]], [[0]])
+    # box [y0, x0, y1, x1] already in 0..1 frame coords -> center (0.5, 0.25)
+    outputs = ([[[0.0, 0.0, 0.5, 1.0]]], [[0.9]], [[0]])
     source = Imx500Source("model.rpk", confidence=0.5)
-    assert source._centroids(_FakeImx500(outputs), None, 320, 320) == [(0.5, 0.25)]
+    assert source._centroids(_FakeImx500(outputs), None) == [(0.5, 0.25)]
 
 
 def test_centroids_filters_low_score_and_non_person():
     # box 0: person but score below threshold; box 1: high score but wrong class
-    outputs = ([[[0, 0, 320, 320], [0, 0, 320, 320]]], [[0.1, 0.9]], [[0, 5]])
+    outputs = ([[[0.0, 0.0, 1.0, 1.0], [0.0, 0.0, 1.0, 1.0]]], [[0.1, 0.9]], [[0, 5]])
     source = Imx500Source("model.rpk", confidence=0.5, person_class_id=0)
-    assert source._centroids(_FakeImx500(outputs), None, 320, 320) == []
+    assert source._centroids(_FakeImx500(outputs), None) == []
 
 
 def test_centroids_returns_empty_when_no_outputs():
     source = Imx500Source("model.rpk")
-    assert source._centroids(_FakeImx500(None), None, 320, 320) == []
+    assert source._centroids(_FakeImx500(None), None) == []
+
+
+def test_centroids_clamps_out_of_range_boxes():
+    # boxes can slightly exceed the frame; centroids must stay within 0..1
+    outputs = ([[[-0.1, -0.2, 1.2, 1.4]]], [[0.9]], [[0]])
+    source = Imx500Source("model.rpk", confidence=0.5)
+    [(cx, cy)] = source._centroids(_FakeImx500(outputs), None)
+    assert 0.0 <= cx <= 1.0 and 0.0 <= cy <= 1.0
+
+
+def test_person_detections_filters_low_score_and_non_person():
+    # box 0: person, high score (kept); box 1: low score; box 2: wrong class
+    outputs = (
+        [[[0.0, 0.0, 1.0, 1.0], [0.1, 0.1, 0.9, 0.9], [0.2, 0.2, 0.6, 0.6]]],
+        [[0.9, 0.2, 0.95]],
+        [[0, 0, 5]],
+    )
+    source = Imx500Source("model.rpk", confidence=0.5, person_class_id=0)
+    assert source._person_detections(_FakeImx500(outputs), None) == [[0.0, 0.0, 1.0, 1.0]]
+
+
+def test_box_to_pixels_scales_normalized_to_image():
+    # normalized box [y0, x0, y1, x1] mapped onto a 640x480 image
+    px = Imx500Source._box_to_pixels([0.0, 0.5, 1.0, 1.0], 640, 480)
+    assert px == (320.0, 0.0, 640.0, 480.0)

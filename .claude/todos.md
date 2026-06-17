@@ -33,8 +33,8 @@ Dabei behoben:
 - [x] Counter-Thread-Resilienz: IMX500-Quelle reconnectet mit Backoff statt Thread-Tod
 
 Noch offen (vor Ort):
-- [ ] IMX500-Box-Parsing gegen Prototyp `personenzaehler.py` abgleichen (Reihenfolge y0,x0,y1,x1 + Normierung)
-- [ ] Reale Durchgaenge testen; ggf. `INVERT_DIRECTION=true` in Pi-`.env`
+- [x] IMX500-Box-Parsing korrigiert (Boxen bereits 0..1-normiert, Reihenfolge y0,x0,y1,x1, Clamping; `_person_detections` geteilt mit Preview-Overlay); durch funktionierende Live-Zaehlung bestaetigt
+- [x] Reale Durchgaenge getestet (2026-06-17 erfolgreich); `INVERT_DIRECTION=false` passt, Richtungszuordnung korrekt
 - [ ] Reboot-Ueberlebenstest (`systemctl enable` ist gesetzt)
 - [x] Resilienz-Fix + Kamera-Preview deployt und live verifiziert (MJPEG, 640x480)
 

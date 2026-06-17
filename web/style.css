@@ -132,5 +132,9 @@ section {
 
 #camera-toggle:hover { border-color: var(--accent); }
 
-.hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.5; }
+.hint { font-size: 0.75rem; color: var(--muted); margin-top: 0.75rem; line-height: 1.6; }
 .hint code { background: var(--bg); padding: 0.05rem 0.3rem; border-radius: 4px; }
+.legend { font-weight: 600; white-space: nowrap; }
+.legend--box { color: var(--accent); }
+.legend--dot { color: var(--text); }
+.legend--line { color: var(--accent-out); }
